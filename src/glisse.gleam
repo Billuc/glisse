@@ -234,12 +234,23 @@ fn parse_item(item: parser.XmlNode) -> Result(RssItem, String) {
   let link = get_optional_text(item, ["item", "link"])
   let description = get_optional_text(item, ["item", "description"])
   let author = get_optional_text(item, ["item", "author"])
-  let category = []
+  let category =
+    gleaxml.get_nodes(item, ["item", "category"])
+    |> list.filter_map(parse_category)
   let comments = get_optional_text(item, ["item", "comments"])
-  let enclosure = option.None
-  let guid = option.None
+  let enclosure =
+    gleaxml.get_node(item, ["item", "enclosure"])
+    |> result.try(parse_enclosure)
+    |> option.from_result()
+  let guid =
+    gleaxml.get_node(item, ["item", "guid"])
+    |> result.try(parse_guid)
+    |> option.from_result()
   let pub_date = get_optional_text(item, ["item", "pubDate"])
-  let source = option.None
+  let source =
+    gleaxml.get_node(item, ["item", "source"])
+    |> result.try(parse_source)
+    |> option.from_result()
 
   case title, description {
     option.None, option.None ->
@@ -258,6 +269,45 @@ fn parse_item(item: parser.XmlNode) -> Result(RssItem, String) {
         source:,
       ))
   }
+}
+
+fn parse_source(node: parser.XmlNode) -> Result(RssSource, String) {
+  use url <- result.try(gleaxml.get_attribute(node, "url"))
+  use value <- result.try(get_required_text(node, ["source"]))
+
+  Ok(RssSource(url:, value:))
+}
+
+fn parse_enclosure(node: parser.XmlNode) -> Result(RssEnclosure, String) {
+  use url <- result.try(gleaxml.get_attribute(node, "url"))
+  use length_str <- result.try(gleaxml.get_attribute(node, "length"))
+  use type_ <- result.try(gleaxml.get_attribute(node, "type"))
+
+  use length <- result.try(
+    int.parse(length_str)
+    |> result.replace_error("Invalid length value"),
+  )
+
+  Ok(RssEnclosure(url:, length:, type_:))
+}
+
+fn parse_category(node: parser.XmlNode) -> Result(RssCategory, String) {
+  let domain =
+    gleaxml.get_attribute(node, "domain")
+    |> option.from_result()
+  use value <- result.try(get_required_text(node, ["category"]))
+
+  Ok(RssCategory(domain:, value:))
+}
+
+fn parse_guid(node: parser.XmlNode) -> Result(RssGuid, String) {
+  let is_perma_link =
+    gleaxml.get_attribute(node, "isPermaLink")
+    |> result.map(fn(v) { v == "true" })
+    |> option.from_result()
+  use value <- result.try(get_required_text(node, ["guid"]))
+
+  Ok(RssGuid(is_perma_link:, value:))
 }
 
 fn get_required_text(
