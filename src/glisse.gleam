@@ -4,7 +4,6 @@ import gleam/option
 import gleam/result
 import gleam/string
 import gleaxml
-import gleaxml/parser
 
 pub type RssDocument {
   RssDocument(version: String, channel: RssChannel)
@@ -97,7 +96,7 @@ pub fn parse_rss(xml: String) -> Result(RssDocument, String) {
   Ok(rss_doc)
 }
 
-fn parse_doc(doc: parser.XmlDocument) -> Result(RssDocument, String) {
+fn parse_doc(doc: gleaxml.XmlDocument) -> Result(RssDocument, String) {
   use chan <- result.try(gleaxml.get_node(doc.root_element, ["rss", "channel"]))
   use version <- result.try(gleaxml.get_attribute(doc.root_element, "version"))
   use channel <- result.try(parse_channel(chan))
@@ -105,7 +104,7 @@ fn parse_doc(doc: parser.XmlDocument) -> Result(RssDocument, String) {
   Ok(RssDocument(version:, channel:))
 }
 
-fn parse_channel(chan: parser.XmlNode) -> Result(RssChannel, String) {
+fn parse_channel(chan: gleaxml.XmlNode) -> Result(RssChannel, String) {
   use title <- result.try(get_required_text(chan, ["channel", "title"]))
   use link <- result.try(get_required_text(chan, ["channel", "link"]))
   use description <- result.try(
@@ -173,7 +172,7 @@ fn parse_channel(chan: parser.XmlNode) -> Result(RssChannel, String) {
   ))
 }
 
-fn parse_cloud(node: parser.XmlNode) -> Result(RssCloud, String) {
+fn parse_cloud(node: gleaxml.XmlNode) -> Result(RssCloud, String) {
   use domain <- result.try(gleaxml.get_attribute(node, "domain"))
   use port_str <- result.try(gleaxml.get_attribute(node, "port"))
   use path <- result.try(gleaxml.get_attribute(node, "path"))
@@ -191,14 +190,14 @@ fn parse_cloud(node: parser.XmlNode) -> Result(RssCloud, String) {
   Ok(RssCloud(domain:, port:, path:, register_procedure:, protocol:))
 }
 
-fn parse_ttl(node: parser.XmlNode) -> Result(Int, String) {
+fn parse_ttl(node: gleaxml.XmlNode) -> Result(Int, String) {
   gleaxml.get_nonempty_texts(node)
   |> string.join("")
   |> int.parse()
   |> result.replace_error("Invalid TTL value")
 }
 
-fn parse_image(node: parser.XmlNode) -> Result(RssImage, String) {
+fn parse_image(node: gleaxml.XmlNode) -> Result(RssImage, String) {
   use url <- result.try(get_required_text(node, ["image", "url"]))
   use title <- result.try(get_required_text(node, ["image", "title"]))
   use link <- result.try(get_required_text(node, ["image", "link"]))
@@ -218,7 +217,7 @@ fn parse_image(node: parser.XmlNode) -> Result(RssImage, String) {
   Ok(RssImage(url:, title:, link:, width:, height:, description:))
 }
 
-fn parse_text_input(node: parser.XmlNode) -> Result(RssTextInput, String) {
+fn parse_text_input(node: gleaxml.XmlNode) -> Result(RssTextInput, String) {
   use title <- result.try(get_required_text(node, ["textInput", "title"]))
   use description <- result.try(
     get_required_text(node, ["textInput", "description"]),
@@ -229,7 +228,7 @@ fn parse_text_input(node: parser.XmlNode) -> Result(RssTextInput, String) {
   Ok(RssTextInput(title:, description:, name:, link:))
 }
 
-fn parse_item(item: parser.XmlNode) -> Result(RssItem, String) {
+fn parse_item(item: gleaxml.XmlNode) -> Result(RssItem, String) {
   let title = get_optional_text(item, ["item", "title"])
   let link = get_optional_text(item, ["item", "link"])
   let description = get_optional_text(item, ["item", "description"])
@@ -271,14 +270,14 @@ fn parse_item(item: parser.XmlNode) -> Result(RssItem, String) {
   }
 }
 
-fn parse_source(node: parser.XmlNode) -> Result(RssSource, String) {
+fn parse_source(node: gleaxml.XmlNode) -> Result(RssSource, String) {
   use url <- result.try(gleaxml.get_attribute(node, "url"))
   use value <- result.try(get_required_text(node, ["source"]))
 
   Ok(RssSource(url:, value:))
 }
 
-fn parse_enclosure(node: parser.XmlNode) -> Result(RssEnclosure, String) {
+fn parse_enclosure(node: gleaxml.XmlNode) -> Result(RssEnclosure, String) {
   use url <- result.try(gleaxml.get_attribute(node, "url"))
   use length_str <- result.try(gleaxml.get_attribute(node, "length"))
   use type_ <- result.try(gleaxml.get_attribute(node, "type"))
@@ -291,7 +290,7 @@ fn parse_enclosure(node: parser.XmlNode) -> Result(RssEnclosure, String) {
   Ok(RssEnclosure(url:, length:, type_:))
 }
 
-fn parse_category(node: parser.XmlNode) -> Result(RssCategory, String) {
+fn parse_category(node: gleaxml.XmlNode) -> Result(RssCategory, String) {
   let domain =
     gleaxml.get_attribute(node, "domain")
     |> option.from_result()
@@ -300,7 +299,7 @@ fn parse_category(node: parser.XmlNode) -> Result(RssCategory, String) {
   Ok(RssCategory(domain:, value:))
 }
 
-fn parse_guid(node: parser.XmlNode) -> Result(RssGuid, String) {
+fn parse_guid(node: gleaxml.XmlNode) -> Result(RssGuid, String) {
   let is_perma_link =
     gleaxml.get_attribute(node, "isPermaLink")
     |> result.map(fn(v) { v == "true" })
@@ -311,7 +310,7 @@ fn parse_guid(node: parser.XmlNode) -> Result(RssGuid, String) {
 }
 
 fn get_required_text(
-  node: parser.XmlNode,
+  node: gleaxml.XmlNode,
   path: List(String),
 ) -> Result(String, String) {
   gleaxml.get_node(node, path)
@@ -320,7 +319,7 @@ fn get_required_text(
 }
 
 fn get_optional_text(
-  node: parser.XmlNode,
+  node: gleaxml.XmlNode,
   path: List(String),
 ) -> option.Option(String) {
   gleaxml.get_node(node, path)
